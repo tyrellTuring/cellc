@@ -69,44 +69,60 @@ macro "batch slicing [b]"{
 
 macro "particleMe [p]"{
 
+	// define measurements to be done on the stack
 	run("Set Measurements...", "area mean centroid feret's integrated stack display redirect=None decimal=3");
 
+	// open original stack
 	path = File.openDialog("open AMYGDALA file")
 	open(path)
-	
+
+	// get title of the original stack. used to save the processed file
 	saveTitle = getTitle();
-	
+
+	//open image controls (brightness and threshold), threshold is set to zero
 	run("Brightness/Contrast...");
-	
 	run ("Threshold...");
 	resetThreshold();
 
+	// this stops the macro execution until the user is done with brightness and thresold
 	waitForUser("Threshold set?");
 
+	// after the user clicks on the dialog: the stack is converted to the thresholded mask (all slices in stack)
 	run("Convert to Mask", "method=Default background=Dark");
-	
+
+	// Analyze particles on stack: size of the particles (um in calibrated images) was defined by manually tracing a sample of nuclei.
+	// the result of the analysis is added to the ROI manager
+	// DIsplay result window (particle outlines)
 	run ("Analyze Particles...", "size=40-150 circularity=0.00-1.00 show=Ellipses  clear add stack");
 
+	// close the result window (particle outlines)
 	selectWindow("Drawing of "+saveTitle);
 	run("Close");
-	
+
+	// Close the original image
 	selectWindow(saveTitle);
 	run("Close");
 
+	//close the result (text file) window
 	run("Close");
-	
+
+	// re-open the original stack
 	open(path);
-	
+
+	// use the rpeviously thresholded image ROIs (i.e. particles) to analyze the original stack file
+	// this is used to get: x-y coordinates, Fluorescence intensiy, area on the original stack.
 	roiManager("Measure");
 
+	// save the Results (text file) to the original directory
 	saveAs("Results", File.directory+File.nameWithoutExtension+"_"+saveTitle+".txt");
 
+	// close all the remaining windows
 	selectWindow(saveTitle);
 	run("Close");
-
 	selectWindow("Results");
 	run("Close");
 
+	// cleanup the ROIsmanager
 	counter = roiManager("count");
 	// Cleanup ROIs
 	for (i = 0; i <counter; i++){
