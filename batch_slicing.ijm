@@ -6,6 +6,18 @@
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 
+
+//////////////////////////// Global function for clearing up the ROI manager/////////////////
+function cleanupROI(){
+	counter = roiManager("count");
+	for (i = 0; i <counter; i++){
+		roiManager("Select", 0);
+		roiManager("Delete");
+	}
+}
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
 ////////////////////////////////////////// BATCH SLICING & STACKING ///////////////////////////////////////////////////////
 macro "batch slicing [b]"{
 
@@ -80,55 +92,73 @@ macro "particleMe [p]"{
 	saveTitle = getTitle();
 
 	//open image controls (brightness and threshold), threshold is set to zero
-	run("Brightness/Contrast...");
-	run ("Threshold...");
-	resetThreshold();
+	//run("Brightness/Contrast...");
+	//run ("Threshold...");
+	//resetThreshold();
+	  
+	  // generate Dialog for getting:
+	  // [1] Sigma smoothing value
+	  // [2] Noise tolerance
+	  Dialog.create("Inital parameters");
+	  Dialog.addNumber("Sigma smoothing:", 3);
+	  Dialog.addNumber("Noise tolerance:", 10);
+	  Dialog.show();
+	  sigmaSmoothing = Dialog.getNumber();
+	  tolerance= Dialog.getNumber();
+	
+	// convert to grays
+	run("Grays");
 
-	// this stops the macro execution until the user is done with brightness and thresold
-	waitForUser("Threshold set?");
+	// Invert the lookup table (Black on White)
+	run("Invert LUT");
 
-	// after the user clicks on the dialog: the stack is converted to the thresholded mask (all slices in stack)
-	run("Convert to Mask", "method=Default background=Dark");
+	// gaussian blur on the whole stack
+	run("Gaussian Blur...","sigma="+sigmaSmoothing+" scaled stack");
+	
+	// find maxima in every slice of the stack
+	setBatchMode(true);
+	input = getImageID();
+	n = nSlices();
+	for (i=1; i<=n; i++) {
+		showProgress(i, n);
+		selectImage(input);
+	 	setSlice(i);
+	 	run("Find Maxima...", "noise="+ tolerance +" output=[Maxima Within Tolerance] light");
+	 	if (i==1)
+	        	output = getImageID();
+	    	else  {
+		 	run("Select All");
+		        run("Copy");
+		        close();
+		        selectImage(output);
+		        run("Add Slice");
+		        run("Paste");
+	    	}
+	  }
+	  run("Select None");
+	  setBatchMode(false);
 
-	// Analyze particles on stack: size of the particles (um in calibrated images) was defined by manually tracing a sample of nuclei.
-	// the result of the analysis is added to the ROI manager
-	// DIsplay result window (particle outlines)
-	run ("Analyze Particles...", "size=40-150 circularity=0.00-1.00 show=Ellipses  clear add stack");
-
-	// close the result window (particle outlines)
-	selectWindow("Drawing of "+saveTitle);
-	run("Close");
+	// Clear results before doing particle analysis
+	run("Clear Results");
+	
+	// Analyze particles detected with Local Maxima
+	// Particle size is hardcoded...
+	run ("Analyze Particles...", "size=5-150 circularity=0.00-1.00 show=Ellipses  clear add stack");
 
 	// Close the original image
 	selectWindow(saveTitle);
-	run("Close");
-
-	//close the result (text file) window
-	run("Close");
-
-	// re-open the original stack
-	open(path);
-
-	// use the rpeviously thresholded image ROIs (i.e. particles) to analyze the original stack file
-	// this is used to get: x-y coordinates, Fluorescence intensiy, area on the original stack.
 	roiManager("Measure");
 
 	// save the Results (text file) to the original directory
-	saveAs("Results", File.directory+File.nameWithoutExtension+"_"+saveTitle+".txt");
+//	saveAs("Results", File.directory+File.nameWithoutExtension+"_"+saveTitle+".txt");
 
-	// close all the remaining windows
-	selectWindow(saveTitle);
-	run("Close");
-	selectWindow("Results");
-	run("Close");
+	// TO DO: close all the remaining windows
+//	selectWindow(xxx);
+//	run("Close");
 
-	// cleanup the ROIsmanager
-	counter = roiManager("count");
-	// Cleanup ROIs
-	for (i = 0; i <counter; i++){
-		roiManager("Select", 0);
-		roiManager("Delete");
-	}
+
+//	ACTIVATE this when doing the actual analysis
+//	cleanupROI();
 	
 }
 
