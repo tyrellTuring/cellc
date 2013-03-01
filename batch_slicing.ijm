@@ -85,7 +85,7 @@ macro "particleMe [p]"{
 	run("Set Measurements...", "area mean centroid feret's integrated stack display redirect=None decimal=3");
 
 	// open original stack
-	path = File.openDialog("open AMYGDALA file")
+	path = File.openDialog("open file")
 	open(path)
 
 	// get title of the original stack. used to save the processed file
@@ -102,9 +102,16 @@ macro "particleMe [p]"{
 	  Dialog.create("Inital parameters");
 	  Dialog.addNumber("Sigma smoothing:", 3);
 	  Dialog.addNumber("Noise tolerance:", 10);
+	  Dialog.addCheckbox("Adjust Brightness/Contrast", true);
 	  Dialog.show();
 	  sigmaSmoothing = Dialog.getNumber();
 	  tolerance= Dialog.getNumber();
+	  brightnessContrast = Dialog.getCheckbox();
+
+	if (brightnessContrast){
+		run("Brightness/Contrast...");
+		waitForUser("Click APPLY and then OK when you're done");
+	}
 	
 	// convert to grays
 	run("Grays");
