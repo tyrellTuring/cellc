@@ -80,7 +80,10 @@ macro "batch slicing [b]"{
 ////////////////////////////////////////// PARTICLE-ANALYSIS ///////////////////////////////////////////////////////
 
 macro "particleMe [p]"{
-
+	
+	// clean up the ROi manager (make sure that nothing is left over from previous analysis)
+	cleanupROI()
+	
 	// define measurements to be done on the stack
 	run("Set Measurements...", "area mean centroid feret's integrated stack display redirect=None decimal=3");
 
@@ -100,12 +103,19 @@ macro "particleMe [p]"{
 	  // [1] Sigma smoothing value
 	  // [2] Noise tolerance
 	  Dialog.create("Inital parameters");
-	  Dialog.addNumber("Sigma smoothing:", 3);
+	  // The following values are perfect for my staining (Leo)
+	  Dialog.addMessage("Choose Smoothing and Noise tolerance for local maxima\n");
+	  Dialog.addNumber("Sigma smoothing:", 3); 
 	  Dialog.addNumber("Noise tolerance:", 10);
-	  Dialog.addCheckbox("Adjust Brightness/Contrast", true);
+	  Dialog.addMessage("Particle Size values (um)\n");
+	  Dialog.addNumber("Particle Size [Min]:", 5);
+	  Dialog.addNumber("Particle Size [Max]:", 150);
+	  Dialog.addCheckbox("Adjust Brightness/Contrast", false);
 	  Dialog.show();
-	  sigmaSmoothing = Dialog.getNumber();
-	  tolerance= Dialog.getNumber();
+	  sigmaSmoothing= Dialog.getNumber();
+	  tolerance 	= Dialog.getNumber();
+	  pSizeMin 	= Dialog.getNumber();
+	  pSizeMax	= Dialog.getNumber();
 	  brightnessContrast = Dialog.getCheckbox();
 
 	if (brightnessContrast){
@@ -149,8 +159,7 @@ macro "particleMe [p]"{
 	run("Clear Results");
 	
 	// Analyze particles detected with Local Maxima
-	// Particle size is hardcoded...
-	run ("Analyze Particles...", "size=5-150 circularity=0.00-1.00 show=Ellipses  clear add stack");
+	run ("Analyze Particles...", "size="+pSizeMin+"-"+pSizeMax+" circularity=0.00-1.00 show=Ellipses  clear add stack");
 
 	// Close the original image
 	selectWindow(saveTitle);
