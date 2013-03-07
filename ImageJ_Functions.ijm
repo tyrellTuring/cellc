@@ -16,6 +16,72 @@ function cleanupROI(){
 	}
 }
 /////////////////////////////////////////////////////////////////////////////////////////////
+function openFile(){
+	path = File.openDialog("open file");
+	open(path);
+	return(path);
+}
+/////////////////////////////////////////////////////////////////////////////////////////////
+	  
+function zProject(){ 
+	// porjection type (MAX or Mean)
+	var projectionType = newArray("Max Intensity","Average intensity");
+	
+	  // Image stack dimension
+	  getDimensions(width, height, channels, slices, frames)
+	  
+	  // DIALOG: input parameters
+	  Dialog.create("Inital parameters");
+	  Dialog.addMessage("........Z-Projection..........\n");
+	  Dialog.addNumber("Start:",1);
+	  Dialog.addNumber("Stop:", slices);
+	  Dialog.addChoice("Projection type",projectionType);
+	  Dialog.show();
+	  start = Dialog.getNumber();
+	  stop = Dialog.getNumber();
+	  projection = Dialog.getChoice();
+    	stack_parameters = "start="+start+" stop="+stop+" projection=["+projection+"]";
+
+	if(channels>1){
+		
+	}
+
+
+
+
+    	
+	run("Z Project...", stack_parameters);
+}
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
