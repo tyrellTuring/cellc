@@ -83,7 +83,8 @@ macro "split and project [x]"{
 	// find image data
 	getDimensions(width, height, channels, slices, frames);
 	
-	var projectionType = newArray("Max Intensity","Average intensity");
+	var projectionType = newArray("Max Intensity","Average Idntensity");
+	
 	
 	//---------------------- Generate Dialog ----------------------
 	Dialog.create("Inital parameters");
@@ -111,11 +112,18 @@ macro "split and project [x]"{
 		run("Brightness/Contrast...");
 		waitForUser("Click APPLY and then OK when you're done");
 	}
-
+	
 	// z-projection (all slides)
 	stack_parameters = "start="+start+" stop="+stop+" projection=["+projection+"]";
 	run("Z Project...", stack_parameters);
-	
+
+
+	setTool("polygon");
+	waitForUser("Trace region and click OK");
+	run("Crop");
+	run("Make Inverse");
+	run("Clear","stack");
+
 	// split channels
 	run("Split Channels");
 
@@ -150,28 +158,10 @@ macro "split and project [x]"{
 		close();
 		//measure
 		//save data to file
-		
 	}
 	cleanupROI();
-	close();
-	
+	close();	
 }
-	
-
-	// select channel 1
-//	selectWindow("C2-MAX_"+saveTitle);
-	
-	// change color to particles
-//	roiManager("Set Fill Color","blue");
-//	run ("Labels...", "color=white font=12 draw");
-//	roiManager("Show All");
-//	waitForUser("results OK?");
-	
-	if(ok){
-	close image
-	save resutls to file
-	}
-	close();
 
 
 ////////////////////////////////////////// PARTICLE-ANALYSIS ///////////////////////////////////////////////////////
