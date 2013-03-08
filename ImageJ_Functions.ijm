@@ -27,29 +27,33 @@ function zProject(){
 	// porjection type (MAX or Mean)
 	var projectionType = newArray("Max Intensity","Average intensity");
 	
-	  // Image stack dimension
-	  getDimensions(width, height, channels, slices, frames)
-	  
-	  // DIALOG: input parameters
-	  Dialog.create("Inital parameters");
-	  Dialog.addMessage("........Z-Projection..........\n");
-	  Dialog.addNumber("Start:",1);
-	  Dialog.addNumber("Stop:", slices);
-	  Dialog.addChoice("Projection type",projectionType);
-	  Dialog.show();
-	  start = Dialog.getNumber();
-	  stop = Dialog.getNumber();
-	  projection = Dialog.getChoice();
-    	stack_parameters = "start="+start+" stop="+stop+" projection=["+projection+"]";
+	// Image stack dimension
+	getDimensions(width, height, channels, slices, frames)
+	
+	// DIALOG: input parameters
+	Dialog.create("Inital parameters");
+	Dialog.addMessage("........ Z-Projection ..........\n");
+	Dialog.addNumber("Start:",1);
+	Dialog.addNumber("Stop:", slices);
+	Dialog.addChoice("Projection type",projectionType);
+	Dialog.addCheckbox("Split channels",true);
+	Dialog.show();
+	
+	start		= Dialog.getNumber();
+	stop		= Dialog.getNumber();
+	splitChannels	= Dialog.getChoice();
+	projection 	= Dialog.getChoice();
 
-	if(channels>1){
-		
+	if (splitChannels){
+		// split channels
+		// loop over images
+		// z project
+		// save individual channesl to folder
 	}
+	
+	stack_parameters = "start="+start+" stop="+stop+" projection=["+projection+"]";
+	
 
-
-
-
-    	
 	run("Z Project...", stack_parameters);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -63,99 +67,112 @@ function zProject(){
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 macro "split and project [x]"{
 
+	// clean up the ROI manager (make sure that nothing is left-behind from previous analysis)
+	cleanupROI();
+	
 	// define measurements to be done on the stack
 	run("Set Measurements...", "area mean centroid feret's integrated stack display redirect=None decimal=3");
-
+	
 	// open original stack
 	path = File.openDialog("open file")
 	open(path)
-
-	// z-projection (assuming only 2 channels in the image)
-    	stack_parameters = "start=1 stop="+nSlices/4+" projection=[Max Intensity]";
-	run("Z Project...", stack_parameters);
-
-	// split channels
-	run("Split Channels");
+	saveTitle = getTitle();
 	
-	// clean up the ROi manager (make sure that nothing is left over from previous analysis)
-	cleanupROI()
+	// find image data
+	getDimensions(width, height, channels, slices, frames);
 	
-	  // generate Dialog for getting:
-	  // [1] Sigma smoothing value
-	  // [2] Noise tolerance
-	  Dialog.create("Inital parameters");
-	  // The following values are perfect for my staining (Leo)
-	  Dialog.addMessage("Choose Smoothing and Noise tolerance for local maxima\n");
-	  Dialog.addNumber("Sigma smoothing:", 3); 
-	  Dialog.addNumber("Noise tolerance:", 10);
-	  Dialog.addMessage("Particle Size values (um)\n");
-	  Dialog.addNumber("Particle Size [Min]:", 5);
-	  Dialog.addNumber("Particle Size [Max]:", 150);
-	  Dialog.addCheckbox("Adjust Brightness/Contrast", false);
-	  Dialog.show();
-	  sigmaSmoothing= Dialog.getNumber();
-	  tolerance 	= Dialog.getNumber();
-	  pSizeMin 	= Dialog.getNumber();
-	  pSizeMax	= Dialog.getNumber();
-	  brightnessContrast = Dialog.getCheckbox();
-
+	var projectionType = newArray("Max Intensity","Average intensity");
+	
+	//---------------------- Generate Dialog ----------------------
+	Dialog.create("Inital parameters");
+	Dialog.addMessage("........ Z-Projection\n");
+	Dialog.addNumber("Start:",1);
+	Dialog.addNumber("Stop:", slices);
+	Dialog.addChoice("Projection type",projectionType);
+	Dialog.addMessage("........ Choose Smoothing\n");
+	Dialog.addNumber("Sigma smoothing:", 2); 
+	Dialog.addMessage("Particle Size values (um)\n");
+	Dialog.addNumber("Particle Size [Min]:", 40);
+	Dialog.addNumber("Particle Size [Max]:", 120);
+	Dialog.addCheckbox("Adjust Brightness/Contrast", false);
+	Dialog.show();
+	//---------------------- get Dialog input ------------------------
+	start		= Dialog.getNumber();
+	stop		= Dialog.getNumber();
+	projection 	= Dialog.getChoice();
+	sigmaSmoothing	= Dialog.getNumber();
+	pSizeMin 	= Dialog.getNumber();
+	pSizeMax 	= Dialog.getNumber();
+	brightnessContrast = Dialog.getCheckbox();
+	
 	if (brightnessContrast){
 		run("Brightness/Contrast...");
 		waitForUser("Click APPLY and then OK when you're done");
 	}
 
+	// z-projection (all slides)
+	stack_parameters = "start="+start+" stop="+stop+" projection=["+projection+"]";
+	run("Z Project...", stack_parameters);
+	
+	// split channels
+	run("Split Channels");
 
-	// convert to grays
-	run("Grays");
+	
+	for (i=1; i<=channels ; i++){
+		// convert to grays
+		run("Grays");
+		
+		// Invert the lookup table (Black on White)
+		run("Invert LUT");
 
-	// Invert the lookup table (Black on White)
-	run("Invert LUT");
+		//work on a backup
+		run("Duplicate...","title=temp");
+		
+		// gaussian blur on the image
+		run("Gaussian Blur...","sigma="+sigmaSmoothing+" scaled stack");
+		
+		run("Auto Local Threshold", "method=Bernsen radius=15 parameter_1=0 parameter_2=0 white");
+		
+		run("Watershed");
+		
+		// find particles
+		run ("Analyze Particles...", "size="+pSizeMin+"-"+pSizeMax+" circularity=0.80-1.00 show=Ellipses  clear add stack");
+		
+		close();
+		close();
 
-	// gaussian blur on the whole stack
-	run("Gaussian Blur...","sigma="+sigmaSmoothing+" scaled stack");
-
-	// find maxima in fisrt image
-	run("Find Maxima...", "noise="+ tolerance +" output=[Count] light");
+		roiManager("Set Fill Color","blue");
+		run ("Labels...", "color=white font=12");
+		roiManager("Show All");
+		waitForUser("results OK?");
+		close();
+		//measure
+		//save data to file
+		
+	}
+	cleanupROI();
 	close();
-
-	// convert to grays
-	run("Grays");
-
-	// Invert the lookup table (Black on White)
-	run("Invert LUT");
-
-	// gaussian blur on the whole stack
-	run("Gaussian Blur...","sigma="+sigmaSmoothing+" scaled stack");
-
-	// find maxima in fisrt image
-	run("Find Maxima...", "noise="+ tolerance +" output=[Count] light");
-	close();
+	
 }
+	
+
+	// select channel 1
+//	selectWindow("C2-MAX_"+saveTitle);
+	
+	// change color to particles
+//	roiManager("Set Fill Color","blue");
+//	run ("Labels...", "color=white font=12 draw");
+//	roiManager("Show All");
+//	waitForUser("results OK?");
+	
+	if(ok){
+	close image
+	save resutls to file
+	}
+	close();
+
 
 ////////////////////////////////////////// PARTICLE-ANALYSIS ///////////////////////////////////////////////////////
 
