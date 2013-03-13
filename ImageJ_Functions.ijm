@@ -150,22 +150,22 @@ macro "split and project [x]"{
 		// processing of DAPI channel using local MAXIMA
 		if (i==2){
 		    run("Find Maxima...", "noise="+ tolerance +" output=[Maxima Within Tolerance] light");
-		    run("Watershed");
-		    // find particles
-		    run ("Analyze Particles...", "size="+pSizeMin+"-"+pSizeMax+" circularity="+pCircMin+"-"+pCircMax+" show=Ellipses exclude clear add stack");
-		
 		}
 		// processing crtc basic thresholding
 		else{
 		    //run("Auto Local Threshold", "method=Bernsen radius=15 parameter_1=0 parameter_2=0 white");
 		    run("Threshold...");
-		    waitForUser("Adjust Threshold then click OK when you're done");
-		    run("Watershed");
-		    // find particles ... min size HARDCODED!!!!!!!!!!!!!!!!!!!!
-		    run ("Analyze Particles...", "size=50-"+pSizeMax+" circularity="+pCircMin+"-"+pCircMax+" show=Ellipses exclude clear add stack");
+		    waitForUser("Adjust Threshold, click APPLY, then click OK when you're done");
 		
 		}
-		
+		run("Watershed");
+		// find particles
+		if (i==2){
+			run ("Analyze Particles...", "size="+pSizeMin+"-"+pSizeMax+" circularity="+pCircMin+"-"+pCircMax+" show=Ellipses exclude clear add stack");
+		}
+		else{
+			run ("Analyze Particles...", "size=30-"+pSizeMax+" circularity="+pCircMin+"-"+pCircMax+" show=Ellipses exclude clear add stack");
+		}
 		close();
 		close();
 
@@ -173,6 +173,20 @@ macro "split and project [x]"{
 		run ("Labels...", "color=white font=12");
 		roiManager("Show All");
 		waitForUser("results OK?");
+		answer = getBoolean("save results?");
+		if (answer){
+			roiManager("Measure");
+			if (i==2){
+				saveTitle="DAPI";
+			}
+			else{
+				saveTitle="CRTC";
+			}
+			saveAs("Results", File.directory+File.nameWithoutExtension+"_"+saveTitle+".txt");
+			
+		}
+		
+		
 		close();
 		//measure
 		//save data to file
