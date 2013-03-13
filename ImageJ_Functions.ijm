@@ -83,7 +83,7 @@ macro "split and project [x]"{
 	// find image data
 	getDimensions(width, height, channels, slices, frames);
 	
-	var projectionType = newArray("Max Intensity","Average Idntensity");
+	var projectionType = newArray("Max Intensity","Average Intensity");
 	
 	
 	//---------------------- Generate Dialog ----------------------
@@ -93,10 +93,13 @@ macro "split and project [x]"{
 	Dialog.addNumber("Stop:", slices);
 	Dialog.addChoice("Projection type",projectionType);
 	Dialog.addMessage("........ Choose Smoothing\n");
-	Dialog.addNumber("Sigma smoothing:", 2); 
+	Dialog.addNumber("Sigma smoothing:", 2);
+	Dialog.addNumber("Noise tolerance:", 20);
 	Dialog.addMessage("Particle Size values (um)\n");
-	Dialog.addNumber("Particle Size [Min]:", 40);
-	Dialog.addNumber("Particle Size [Max]:", 120);
+	Dialog.addNumber("Particle Size [Min]:", 5);
+	Dialog.addNumber("Particle Size [Max]:", 250);
+	Dialog.addNumber("Particle Circularity [Min]:", 0.4);
+	Dialog.addNumber("Particle Circularity [Max]:", 1);
 	Dialog.addCheckbox("Adjust Brightness/Contrast", false);
 	Dialog.show();
 	//---------------------- get Dialog input ------------------------
@@ -104,8 +107,11 @@ macro "split and project [x]"{
 	stop		= Dialog.getNumber();
 	projection 	= Dialog.getChoice();
 	sigmaSmoothing	= Dialog.getNumber();
+	tolerance	= Dialog.getNumber();
 	pSizeMin 	= Dialog.getNumber();
 	pSizeMax 	= Dialog.getNumber();
+	pCircMin 	= Dialog.getNumber();
+	pCircMax 	= Dialog.getNumber();
 	brightnessContrast = Dialog.getCheckbox();
 	
 	if (brightnessContrast){
@@ -127,7 +133,7 @@ macro "split and project [x]"{
 	// split channels
 	run("Split Channels");
 
-	
+	// ASSUMING THAT DAPI IS ALWAYS THE FIRST CHANNEL!!!!!!!!
 	for (i=1; i<=channels ; i++){
 		// convert to grays
 		run("Grays");
@@ -141,17 +147,29 @@ macro "split and project [x]"{
 		// gaussian blur on the image
 		run("Gaussian Blur...","sigma="+sigmaSmoothing+" scaled stack");
 		
-		run("Auto Local Threshold", "method=Bernsen radius=15 parameter_1=0 parameter_2=0 white");
+		// processing of DAPI channel using local MAXIMA
+		if (i==2){
+		    run("Find Maxima...", "noise="+ tolerance +" output=[Maxima Within Tolerance] light");
+		    run("Watershed");
+		    // find particles
+		    run ("Analyze Particles...", "size="+pSizeMin+"-"+pSizeMax+" circularity="+pCircMin+"-"+pCircMax+" show=Ellipses exclude clear add stack");
 		
-		run("Watershed");
+		}
+		// processing crtc basic thresholding
+		else{
+		    //run("Auto Local Threshold", "method=Bernsen radius=15 parameter_1=0 parameter_2=0 white");
+		    run("Threshold...");
+		    waitForUser("Adjust Threshold then click OK when you're done");
+		    run("Watershed");
+		    // find particles ... min size HARDCODED!!!!!!!!!!!!!!!!!!!!
+		    run ("Analyze Particles...", "size=50-"+pSizeMax+" circularity="+pCircMin+"-"+pCircMax+" show=Ellipses exclude clear add stack");
 		
-		// find particles
-		run ("Analyze Particles...", "size="+pSizeMin+"-"+pSizeMax+" circularity=0.80-1.00 show=Ellipses  clear add stack");
+		}
 		
 		close();
 		close();
 
-		roiManager("Set Fill Color","blue");
+		roiManager("Set Fill Color","green");
 		run ("Labels...", "color=white font=12");
 		roiManager("Show All");
 		waitForUser("results OK?");
@@ -160,6 +178,7 @@ macro "split and project [x]"{
 		//save data to file
 	}
 	cleanupROI();
+	close();
 	close();	
 }
 
