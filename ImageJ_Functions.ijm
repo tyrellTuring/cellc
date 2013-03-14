@@ -77,7 +77,7 @@ macro "count DAPI and Marker [x]"{
 	path = File.openDialog("open file")
 	open(path)
 	saveTitle = getTitle();
-	print("file: ",saveTitle);
+	//print("file: ",saveTitle);
 	
 	// find image data
 	getDimensions(width, height, channels, slices, frames);
@@ -129,6 +129,9 @@ macro "count DAPI and Marker [x]"{
 
 	// split channels
 	run("Split Channels");
+
+	selectWindow(saveTitle);
+	close();
 
 	// ASSUMING THAT DAPI IS ALWAYS THE FIRST CHANNEL!!!!!!!!
 	for (i=1; i<=channels ; i++){
@@ -195,7 +198,6 @@ macro "count DAPI and Marker [x]"{
 	cleanupROI();
 
 	// close all remaining images
-	close();
 	close();	
 }
 
