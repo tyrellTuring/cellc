@@ -2,9 +2,8 @@
 //MADE BY: 	Leonardo Restivo | Franklandlab
 //DATE:	Feb/2013
 //DESCRIPTION:
-//	Process images for amygdala project (z- project, split channels, particle analysis define ROIs)
+//	general macros for cell counting and region definition (ROI)
 /////////////////////////////////////////////////////////////////////////////////////////////
-
 
 
 //////////////////////////// Global function for clearing up the ROI manager/////////////////
@@ -15,14 +14,15 @@ function cleanupROI(){
 		roiManager("Delete");
 	}
 }
-/////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////Global function for opening file/////////////////////////////////////
 function openFile(){
 	path = File.openDialog("open file");
 	open(path);
 	return(path);
 }
-/////////////////////////////////////////////////////////////////////////////////////////////
-	  
+
+///////////////////////////GLobal function for z-projection/////////////////////////////////
 function zProject(){ 
 	// porjection type (MAX or Mean)
 	var projectionType = newArray("Max Intensity","Average intensity");
@@ -56,18 +56,16 @@ function zProject(){
 
 	run("Z Project...", stack_parameters);
 }
-/////////////////////////////////////////////////////////////////////////////////////////////
 
 
+/////////////////////////////////////MACRO///////////////////////////////////////////////
+// THis macro is tuned for counting DAPInuclei and one additional marker (i.e. 2 channels)
+// DAPI is always on the first channel
+// DAPIis counted using local maxima
+// the second marker is counted using a basic thresholding method
+/////////////////////////////////////////////////////////////////////////////////////////
 
-
-
-
-
-
-
-
-macro "split and project [x]"{
+macro "count DAPI and Marker [x]"{
 
 	// clean up the ROI manager (make sure that nothing is left-behind from previous analysis)
 	cleanupROI();
@@ -146,26 +144,27 @@ macro "split and project [x]"{
 		// gaussian blur on the image
 		run("Gaussian Blur...","sigma="+sigmaSmoothing+" scaled stack");
 		
-		// processing of DAPI channel using local MAXIMA
+		// processing of DAPI: local MAXIMA
 		if (i==2){
 		    run("Find Maxima...", "noise="+ tolerance +" output=[Maxima Within Tolerance] light");
 		}
-		// processing crtc basic thresholding
+		// processing CRTC: basic thresholding
 		else{
 		    //run("Auto Local Threshold", "method=Bernsen radius=15 parameter_1=0 parameter_2=0 white");
 		    run("Threshold...");
 		    waitForUser("Adjust Threshold, click APPLY, then click OK when you're done");
-		
 		}
-		run("Watershed");
-		// find particles
 
-		
+		// split nuclei
+		run("Watershed");
+
+		// DAPI counting: user-defined particle size and circularity
 		if (i==2){
 			run ("Analyze Particles...", "size="+pSizeMin+"-"+pSizeMax+" circularity="+pCircMin+"-"+pCircMax+" show=Ellipses exclude clear add stack");
 			counter = roiManager("count");
 			print ("Total DAPI cells:", counter);
 		}
+		// CRTC counting: MIN particle size is hard-coded(!!!) MAX size, circularity are user-defined
 		else{
 			run ("Analyze Particles...", "size=30-"+pSizeMax+" circularity="+pCircMin+"-"+pCircMax+" show=Ellipses exclude clear add stack");
 			counter = roiManager("count");
@@ -187,16 +186,15 @@ macro "split and project [x]"{
 			else{
 				saveTitle="CRTC";
 			}
-			saveAs("Results", File.directory+File.nameWithoutExtension+"_"+saveTitle+".txt");
-			
-		}
-		
-		
+			saveAs("Results", File.directory+File.nameWithoutExtension+"_"+saveTitle+".txt");	
+		}		
 		close();
-		//measure
-		//save data to file
 	}
+
+	// empty roi manager
 	cleanupROI();
+
+	// close all remaining images
 	close();
 	close();	
 }
@@ -305,7 +303,6 @@ macro "particleMe [p]"{
 
 
 //////////////////////////////////// DEFINE-ROIs /////////////////////////////////////////////////
-
 macro "Regions [r]" {
 
 	// set measurements
