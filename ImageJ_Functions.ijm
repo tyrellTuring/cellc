@@ -79,12 +79,12 @@ macro "split and project [x]"{
 	path = File.openDialog("open file")
 	open(path)
 	saveTitle = getTitle();
+	print("file: ",saveTitle);
 	
 	// find image data
 	getDimensions(width, height, channels, slices, frames);
 	
 	var projectionType = newArray("Max Intensity","Average Intensity");
-	
 	
 	//---------------------- Generate Dialog ----------------------
 	Dialog.create("Inital parameters");
@@ -123,7 +123,6 @@ macro "split and project [x]"{
 	stack_parameters = "start="+start+" stop="+stop+" projection=["+projection+"]";
 	run("Z Project...", stack_parameters);
 
-
 	setTool("polygon");
 	waitForUser("Trace region and click OK");
 	run("Crop");
@@ -160,11 +159,17 @@ macro "split and project [x]"{
 		}
 		run("Watershed");
 		// find particles
+
+		
 		if (i==2){
 			run ("Analyze Particles...", "size="+pSizeMin+"-"+pSizeMax+" circularity="+pCircMin+"-"+pCircMax+" show=Ellipses exclude clear add stack");
+			counter = roiManager("count");
+			print ("Total DAPI cells:", counter);
 		}
 		else{
 			run ("Analyze Particles...", "size=30-"+pSizeMax+" circularity="+pCircMin+"-"+pCircMax+" show=Ellipses exclude clear add stack");
+			counter = roiManager("count");
+			print ("Total CRTC cells:", counter);
 		}
 		close();
 		close();
