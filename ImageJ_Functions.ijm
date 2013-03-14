@@ -77,7 +77,7 @@ macro "count DAPI and Marker [x]"{
 	path = File.openDialog("open file")
 	open(path)
 	saveTitle = getTitle();
-	//print("file: ",saveTitle);
+	print("file: ",saveTitle);
 	
 	// find image data
 	getDimensions(width, height, channels, slices, frames);
@@ -175,9 +175,10 @@ macro "count DAPI and Marker [x]"{
 		}
 		close();
 		close();
+		
 
 		roiManager("Set Fill Color","green");
-		run ("Labels...", "color=white font=12");
+		run ("Labels...", "color=white font=1");
 		roiManager("Show All");
 		waitForUser("results OK?");
 		answer = getBoolean("save results?");
